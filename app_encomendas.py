@@ -24,11 +24,11 @@ st.markdown("""
         --secondary: #F7931E;
     }
 
-   .main {
+  .main {
         background: linear-gradient(135deg, #FFF5F0 0%, #FFE8D6 100%);
     }
 
-   .metric-card {
+  .metric-card {
         background: white;
         padding: 20px;
         border-radius: 15px;
@@ -37,7 +37,7 @@ st.markdown("""
         margin-bottom: 15px;
     }
 
-   .stButton>button {
+  .stButton>button {
         border-radius: 10px;
         border: none;
         background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
@@ -47,12 +47,12 @@ st.markdown("""
         transition: all 0.3s;
     }
 
-   .stButton>button:hover {
+  .stButton>button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(255,107,53,0.3);
     }
 
-   .stTabs [data-baseweb="tab-list"] {
+  .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: white;
         padding: 10px;
@@ -60,13 +60,13 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-   .stTabs [data-baseweb="tab"] {
+  .stTabs [data-baseweb="tab"] {
         border-radius: 10px;
         padding: 10px 20px;
         font-weight: 600;
     }
 
-   .stTabs [aria-selected="true"] {
+  .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
         color: white;
     }
@@ -76,7 +76,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-   .login-container {
+  .login-container {
         max-width: 400px;
         margin: 50px auto;
         padding: 40px;
@@ -274,7 +274,7 @@ def app_principal():
         st.markdown("---")
         st.markdown("**Produtos* (selecione os salgados e a quantidade)**")
 
-        col1, col2, col3 = st.columns([3,2])
+        col1, col2, col3 = st.columns([3,2,2])
         with col1:
             salgado_escolhido = st.selectbox("Tipo de salgado", SALGADOS, key="salgado")
         with col2:
@@ -356,7 +356,7 @@ def app_principal():
             index = int(encomenda_selecionada.split(" - ")[0])
             col1, col2, col3 = st.columns(3)
             col1.metric("Cliente", df.loc[index, 'Cliente'])
-            col2.metric("Produto", df.loc[index, 'Produto'][:30]+"...")
+            col2.metric("Produto", str(df.loc[index, 'Produto'])[:30]+"...")
             col3.metric("Status Atual", df.loc[index, 'Status'])
             novo_status = st.selectbox(
                 "Novo Status",
