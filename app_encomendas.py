@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS CUSTOMIZADO
+# CSS CUSTOMIZADO - DESIGN PREMIUM LARANJA/PRETO
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -22,13 +22,16 @@ st.markdown("""
     :root {
         --primary: #FF6B35;
         --secondary: #F7931E;
+        --success: #00C851;
+        --danger: #ff4444;
+        --dark: #2E2E2E;
     }
 
-  .main {
+   .main {
         background: linear-gradient(135deg, #FFF5F0 0%, #FFE8D6 100%);
     }
 
-  .metric-card {
+   .metric-card {
         background: white;
         padding: 20px;
         border-radius: 15px;
@@ -37,7 +40,7 @@ st.markdown("""
         margin-bottom: 15px;
     }
 
-  .stButton>button {
+   .stButton>button {
         border-radius: 10px;
         border: none;
         background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
@@ -47,12 +50,12 @@ st.markdown("""
         transition: all 0.3s;
     }
 
-  .stButton>button:hover {
+   .stButton>button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(255,107,53,0.3);
     }
 
-  .stTabs [data-baseweb="tab-list"] {
+   .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: white;
         padding: 10px;
@@ -60,13 +63,13 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-  .stTabs [data-baseweb="tab"] {
+   .stTabs [data-baseweb="tab"] {
         border-radius: 10px;
         padding: 10px 20px;
         font-weight: 600;
     }
 
-  .stTabs [aria-selected="true"] {
+   .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
         color: white;
     }
@@ -76,7 +79,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-  .login-container {
+   .login-container {
         max-width: 400px;
         margin: 50px auto;
         padding: 40px;
@@ -89,17 +92,7 @@ st.markdown("""
 
 ARQUIVO_CSV = "encomendas.csv"
 LOGO_PATH = "logo.png"
-
-# LISTA DE SALGADOS
-SALGADOS = [
-    'Coxinha', 'Pastel de frango', 'Pastel doce', 'Pastel de queijo',
-    'Pastel misto', 'Pastel de carne', 'Canudos de frango',
-    'Canudos de carne', 'Canudos de frango c/ azeitona e maionese',
-    'Tortelete de frango', 'Tortelete doce', 'Empada',
-    'Salgadinho de queijo assado', 'Salgadinho de queijo frito',
-    'Bolinha empanada de azeitona e queijo', 'Bolinha empanada de queijo',
-    'Bolinha empanada de charque', 'Mini pizzas', 'Pastel mercado'
-]
+NUMEROS_PRODUCAO = ["5587999968632", "5587935001939"]
 
 # FUNÇÕES AUXILIARES
 def atualizar_status_automatico(df):
@@ -130,6 +123,7 @@ def carregar_dados():
         except pd.errors.EmptyDataError:
             pass
 
+    # Se não existe, está vazio ou deu erro, cria um novo
     df_vazio = pd.DataFrame(columns=[
         'Data_Pedido', 'Cliente', 'Telefone', 'Produto', 'Quantidade',
         'Valor', 'Data_Entrega', 'Hora_Entrega', 'Status', 'Observacoes'
@@ -150,8 +144,83 @@ def card_metrica(titulo, valor, icone, cor):
             </div>
             <div style="font-size: 40px;">{icone}</div>
         </div>
-    </div>
     """, unsafe_allow_html=True)
+
+def gerar_relatorio_semana(df, inicio_semana, fim_semana):
+    df_semana = df[
+        (df['Data_Entrega_dt'].dt.date >= inicio_semana) &
+        (df['Data_Entrega_dt'].dt.date <= fim_semana) &
+        (df['Status'].isin(['Pendente', 'Em produção', 'Pronto']))
+    ].copy()
+    if df_semana.empty:
+        return "Nenhuma entrega pendente para esta semana."
+    df_semana = df_semana.sort_values(['Data_Entrega_dt', 'Hora_Entrega'])
+    total_semana = df_semana['Valor'].sum()
+    relatorio = f"*RELATÓRIO SEMANA {inicio_semana.strftime('%d/%m')} a {fim_semana.strftime('%d/%m')}*\n"
+    relatorio += f"Total: {len(df_semana)} pedidos | R$ {total_semana:.2f}\n\n"
+    for data, grupo in df_semana.groupby('Data_Entrega'):
+        relatorio += f"📅 {data}\n"
+        for _, row in grupo.iterrows():
+            relatorio += f"- {row['Hora_Entrega']} | {row['Cliente']} | {row['Quantidade']}x {row['Produto']} | R$ {row['Valor']:.2f}\n"
+        relatorio += "\n"
+    return relatorio
+
+def gerar_relatorio_mes(df, mes, ano):
+    df_mes = df[
+        (df['Data_Entrega_dt'].dt.month == mes) &
+        (df['Data_Entrega_dt'].dt.year == ano) &
+        (df['Status'].isin(['Pendente', 'Em produção', 'Pronto']))
+    ].copy()
+    if df_mes.empty:
+        return "Nenhuma entrega pendente para este mês."
+    df_mes = df_mes.sort_values(['Data_Entrega_dt', 'Hora_Entrega'])
+    total_mes = df_mes['Valor'].sum()
+    relatorio = f"*RELATÓRIO MÊS {mes}/{ano}*\n"
+    relatorio += f"Total: {len(df_mes)} pedidos | R$ {total_mes:.2f}\n\n"
+    for data, grupo in df_mes.groupby('Data_Entrega'):
+        relatorio += f"📅 {data}\n"
+        for _, row in grupo.iterrows():
+            relatorio += f"- {row['Hora_Entrega']} | {row['Cliente']} | {row['Quantidade']}x {row['Produto']} | R$ {row['Valor']:.2f}\n"
+        relatorio += "\n"
+    return relatorio
+
+def gerar_relatorio_entregues(df, inicio, fim):
+    df_entregues = df[
+        (df['Data_Entrega_dt'].dt.date >= inicio) &
+        (df['Data_Entrega_dt'].dt.date <= fim) &
+        (df['Status'] == 'Entregue')
+    ].copy()
+    if df_entregues.empty:
+        return "Nenhuma entrega registrada neste período."
+    df_entregues = df_entregues.sort_values(['Data_Entrega_dt', 'Hora_Entrega'])
+    total = df_entregues['Valor'].sum()
+    relatorio = f"*RELATÓRIO ENTREGUES ({inicio.strftime('%d/%m')} a {fim.strftime('%d/%m')})*\n"
+    relatorio += f"Total: {len(df_entregues)} pedidos | R$ {total:.2f}\n\n"
+    for data, grupo in df_entregues.groupby('Data_Entrega'):
+        relatorio += f"📅 {data}\n"
+        for _, row in grupo.iterrows():
+            relatorio += f"- {row['Hora_Entrega']} | {row['Cliente']} | {row['Quantidade']}x {row['Produto']} | R$ {row['Valor']:.2f}\n"
+        relatorio += "\n"
+    return relatorio
+
+def gerar_relatorio_canceladas(df, inicio, fim):
+    df_canceladas = df[
+        (df['Data_Entrega_dt'].dt.date >= inicio) &
+        (df['Data_Entrega_dt'].dt.date <= fim) &
+        (df['Status'] == 'Cancelada')
+    ].copy()
+    if df_canceladas.empty:
+        return "Nenhuma encomenda cancelada neste período."
+    df_canceladas = df_canceladas.sort_values(['Data_Entrega_dt', 'Hora_Entrega'])
+    total = df_canceladas['Valor'].sum()
+    relatorio = f"*RELATÓRIO CANCELADAS ({inicio.strftime('%d/%m')} a {fim.strftime('%d/%m')})*\n"
+    relatorio += f"Total: {len(df_canceladas)} pedidos | R$ {total:.2f}\n\n"
+    for data, grupo in df_canceladas.groupby('Data_Entrega'):
+        relatorio += f"📅 {data}\n"
+        for _, row in grupo.iterrows():
+            relatorio += f"- {row['Hora_Entrega']} | {row['Cliente']} | {row['Quantidade']}x {row['Produto']} | R$ {row['Valor']:.2f}\n"
+        relatorio += "\n"
+    return relatorio
 
 # TELA DE LOGIN
 def login():
@@ -179,10 +248,6 @@ def login():
 
 # APP PRINCIPAL
 def app_principal():
-    # INICIALIZA LISTA DE PRODUTOS
-    if 'produtos' not in st.session_state:
-        st.session_state.produtos = []
-
     # HEADER
     col1, col2, col3 = st.columns([1,3,1])
     with col1:
@@ -193,14 +258,14 @@ def app_principal():
     with col3:
         if st.button("🚪 Sair", use_container_width=True):
             st.session_state['logado'] = False
-            st.session_state.produtos = []
             st.rerun()
 
     st.markdown("---")
 
     # ABAS
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Dashboard", "➕ Nova", "📋 Ver", "✏️ Editar", "🗑️ Excluir"
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+        "📊 Dashboard", "➕ Nova", "📋 Ver", "✏️ Editar", "🗑️ Excluir",
+        "✅ Entregues", "🚫 Canceladas", "🖨️ Relatório", "📱 Lembretes", "⚙️ Config"
     ])
 
     # ABA 1 - DASHBOARD
@@ -259,74 +324,44 @@ def app_principal():
     # ABA 2 - NOVA ENCOMENDA
     with tab2:
         st.subheader("➕ Cadastrar Nova Encomenda")
+        with st.form("nova_encomenda", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Dados do Cliente**")
+                cliente = st.text_input("Nome*", placeholder="Nome completo")
+                telefone = st.text_input("WhatsApp", placeholder="(87) 99999-9999")
+                produto = st.text_input("Produto*", placeholder="Ex: Coxinha, Pastel")
+            with col2:
+                st.markdown("**Detalhes do Pedido**")
+                quantidade = st.number_input("Quantidade*", min_value=1, step=1)
+                valor = st.number_input("Valor Total R$*", min_value=0.0, step=0.50, format="%.2f")
+                data_entrega = st.date_input("Data de Entrega*", value=date.today())
+                hora_entrega = st.time_input("Hora de Entrega*")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**Dados do Cliente**")
-            cliente = st.text_input("Nome*", placeholder="Nome completo", key="nome")
-            telefone = st.text_input("WhatsApp", placeholder="(87) 99999-9999", key="tel")
-        with col2:
-            st.markdown("**Detalhes do Pedido**")
-            valor = st.number_input("Valor Total R$*", min_value=0.0, step=0.50, format="%.2f", key="val")
-            data_entrega = st.date_input("Data de Entrega*", value=date.today(), key="data")
-            hora_entrega = st.time_input("Hora de Entrega*", key="hora")
+            observacoes = st.text_area("📝 Observações", placeholder="Alguma observação especial?")
+            enviado = st.form_submit_button("💾 Salvar Encomenda", use_container_width=True)
 
-        st.markdown("---")
-        st.markdown("**Produtos* (selecione os salgados e a quantidade)**")
-
-        col1, col2, col3 = st.columns([3,2,2])
-        with col1:
-            salgado_escolhido = st.selectbox("Tipo de salgado", SALGADOS, key="salgado")
-        with col2:
-            quantidade = st.number_input("Quantidade", min_value=1, step=1, key="qtd")
-        with col3:
-            st.write("")
-            st.write("")
-            if st.button("➕ Adicionar", use_container_width=True):
-                st.session_state.produtos.append({"produto": salgado_escolhido, "quantidade": quantidade})
-                st.rerun()
-
-        # MOSTRA OS PRODUTOS ADICIONADOS
-        if st.session_state.produtos:
-            st.markdown("**Produtos adicionados:**")
-            total_qtd = 0
-            for i, p in enumerate(st.session_state.produtos):
-                col1, col2 = st.columns([4,1])
-                col1.write(f"• {p['quantidade']}x {p['produto']}")
-                if col2.button("🗑️", key=f"rem_{i}"):
-                    st.session_state.produtos.pop(i)
-                    st.rerun()
-                total_qtd += p['quantidade']
-            st.info(f"Total: {total_qtd} salgados")
-        else:
-            st.warning("⚠️ Adicione pelo menos 1 produto")
-
-        observacoes = st.text_area("📝 Observações", placeholder="Alguma observação especial?", key="obs")
-
-        if st.button("💾 Salvar Encomenda", use_container_width=True, type="primary"):
-            if cliente and st.session_state.produtos and valor > 0:
-                df = carregar_dados()
-                produtos_texto = ", ".join([f"{p['quantidade']}x {p['produto']}" for p in st.session_state.produtos])
-                nova_linha = pd.DataFrame([{
-                    'Data_Pedido': datetime.now().strftime('%d/%m/%Y %H:%M'),
-                    'Cliente': cliente,
-                    'Telefone': telefone,
-                    'Produto': produtos_texto,
-                    'Quantidade': sum([p['quantidade'] for p in st.session_state.produtos]),
-                    'Valor': valor,
-                    'Data_Entrega': data_entrega.strftime('%d/%m/%Y'),
-                    'Hora_Entrega': hora_entrega.strftime('%H:%M'),
-                    'Status': 'Pendente',
-                    'Observacoes': observacoes
-                }])
-                df = pd.concat([df, nova_linha], ignore_index=True)
-                salvar_dados(df)
-                st.success(f"✅ Encomenda de {cliente} salva com sucesso!")
-                st.session_state.produtos = []
-                st.balloons()
-                st.rerun()
-            else:
-                st.error("❌ Preencha nome, valor e adicione pelo menos 1 produto")
+            if enviado:
+                if cliente and produto and quantidade > 0 and valor > 0:
+                    df = carregar_dados()
+                    nova_linha = pd.DataFrame([{
+                        'Data_Pedido': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                        'Cliente': cliente,
+                        'Telefone': telefone,
+                        'Produto': produto,
+                        'Quantidade': quantidade,
+                        'Valor': valor,
+                        'Data_Entrega': data_entrega.strftime('%d/%m/%Y'),
+                        'Hora_Entrega': hora_entrega.strftime('%H:%M'),
+                        'Status': 'Pendente',
+                        'Observacoes': observacoes
+                    }])
+                    df = pd.concat([df, nova_linha], ignore_index=True)
+                    salvar_dados(df)
+                    st.success(f"✅ Encomenda de {cliente} salva com sucesso!")
+                    st.balloons()
+                else:
+                    st.error("❌ Preencha todos os campos com *")
 
     # ABA 3 - VER ENCOMENDAS
     with tab3:
@@ -356,7 +391,7 @@ def app_principal():
             index = int(encomenda_selecionada.split(" - ")[0])
             col1, col2, col3 = st.columns(3)
             col1.metric("Cliente", df.loc[index, 'Cliente'])
-            col2.metric("Produto", str(df.loc[index, 'Produto'])[:30]+"...")
+            col2.metric("Produto", df.loc[index, 'Produto'])
             col3.metric("Status Atual", df.loc[index, 'Status'])
             novo_status = st.selectbox(
                 "Novo Status",
@@ -394,6 +429,207 @@ def app_principal():
                 salvar_dados(df)
                 st.success(f"Encomenda de {nome_cliente} excluída!")
                 st.rerun()
+
+    # ABA 6 - ENTREGUES
+    with tab6:
+        st.subheader("✅ Encomendas Entregues")
+        df = carregar_dados()
+        if df.empty:
+            st.info("📭 Nenhuma encomenda cadastrada ainda.")
+        else:
+            df['Data_Entrega_dt'] = pd.to_datetime(df['Data_Entrega'], format='%d/%m/%Y', errors='coerce')
+            hoje = date.today()
+            inicio = hoje - timedelta(days=30)
+            fim = hoje
+            col1, col2 = st.columns(2)
+            inicio = col1.date_input("De", value=inicio)
+            fim = col2.date_input("Até", value=fim)
+            df_entregues = df[
+                (df['Data_Entrega_dt'].dt.date >= inicio) &
+                (df['Data_Entrega_dt'].dt.date <= fim) &
+                (df['Status'] == 'Entregue')
+            ]
+            if df_entregues.empty:
+                st.info("Nenhuma entrega registrada neste período.")
+            else:
+                total_entregue = df_entregues['Valor'].sum()
+                st.write(f"**Total:** {len(df_entregues)} entregas | **R$ {total_entregue:.2f}**")
+                st.dataframe(df_entregues, use_container_width=True, hide_index=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🖨️ Gerar Relatório", use_container_width=True):
+                        relatorio = gerar_relatorio_entregues(df, inicio, fim)
+                        st.markdown(relatorio.replace('\n', ' \n'))
+                        st.info("💡 Aperte Ctrl+P para imprimir")
+                with col2:
+                    relatorio = gerar_relatorio_entregues(df, inicio, fim)
+                    link = f"https://wa.me/?text={urllib.parse.quote(relatorio)}"
+                    st.link_button("📱 Compartilhar WhatsApp", link, use_container_width=True)
+
+    # ABA 7 - CANCELADAS
+    with tab7:
+        st.subheader("🚫 Encomendas Canceladas")
+        df = carregar_dados()
+        if df.empty:
+            st.info("📭 Nenhuma encomenda cadastrada ainda.")
+        else:
+            df['Data_Entrega_dt'] = pd.to_datetime(df['Data_Entrega'], format='%d/%m/%Y', errors='coerce')
+            hoje = date.today()
+            inicio = hoje - timedelta(days=30)
+            fim = hoje
+            col1, col2 = st.columns(2)
+            inicio = col1.date_input("De", value=inicio, key="canc_de")
+            fim = col2.date_input("Até", value=fim, key="canc_ate")
+            df_canceladas = df[
+                (df['Data_Entrega_dt'].dt.date >= inicio) &
+                (df['Data_Entrega_dt'].dt.date <= fim) &
+                (df['Status'] == 'Cancelada')
+            ]
+            if df_canceladas.empty:
+                st.info("Nenhuma encomenda cancelada neste período.")
+            else:
+                total_cancelado = df_canceladas['Valor'].sum()
+                st.write(f"**Total:** {len(df_canceladas)} canceladas | **R$ {total_cancelado:.2f}**")
+                st.dataframe(df_canceladas, use_container_width=True, hide_index=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🖨️ Gerar Relatório", use_container_width=True, key="rel_canc"):
+                        relatorio = gerar_relatorio_canceladas(df, inicio, fim)
+                        st.markdown(relatorio.replace('\n', ' \n'))
+                        st.info("💡 Aperte Ctrl+P para imprimir")
+                with col2:
+                    relatorio = gerar_relatorio_canceladas(df, inicio, fim)
+                    link = f"https://wa.me/?text={urllib.parse.quote(relatorio)}"
+                    st.link_button("📱 Compartilhar WhatsApp", link, use_container_width=True)
+
+    # ABA 8 - RELATÓRIO
+    with tab8:
+        st.subheader("🖨️ Gerar Relatório")
+        df = carregar_dados()
+        if df.empty:
+            st.info("📭 Nenhuma encomenda cadastrada ainda.")
+        else:
+            df['Data_Entrega_dt'] = pd.to_datetime(df['Data_Entrega'], format='%d/%m/%Y', errors='coerce')
+            hoje = date.today()
+            tipo = st.radio("Tipo:", ["📅 Por Semana", "📆 Por Mês"], horizontal=True)
+            if tipo == "📅 Por Semana":
+                inicio = hoje - timedelta(days=hoje.weekday())
+                fim = inicio + timedelta(days=6)
+                st.write(f"**Período:** {inicio.strftime('%d/%m/%Y')} até {fim.strftime('%d/%m/%Y')}")
+                df_filtrado = df[
+                    (df['Data_Entrega_dt'].dt.date >= inicio) &
+                    (df['Data_Entrega_dt'].dt.date <= fim) &
+                    (df['Status'].isin(['Pendente', 'Em produção', 'Pronto']))
+                ].copy()
+                relatorio = gerar_relatorio_semana(df, inicio, fim)
+            else:
+                col1, col2 = st.columns(2)
+                mes = col1.selectbox("Mês", range(1, 13), index=hoje.month-1, format_func=lambda x: f"{x:02d}")
+                ano = col2.number_input("Ano", min_value=2020, max_value=2030, value=hoje.year)
+                df_filtrado = df[
+                    (df['Data_Entrega_dt'].dt.month == mes) &
+                    (df['Data_Entrega_dt'].dt.year == ano) &
+                    (df['Status'].isin(['Pendente', 'Em produção', 'Pronto']))
+                ].copy()
+                relatorio = gerar_relatorio_mes(df, mes, ano)
+
+            if df_filtrado.empty:
+                st.info("Nenhuma entrega pendente para este período.")
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🖨️ Imprimir", use_container_width=True):
+                        if os.path.exists(LOGO_PATH):
+                            st.image(LOGO_PATH, width=150)
+                        st.markdown(relatorio.replace('\n', ' \n'))
+                        st.info("💡 Aperte Ctrl+P ou Cmd+P para imprimir")
+                with col2:
+                    link = f"https://wa.me/?text={urllib.parse.quote(relatorio)}"
+                    st.link_button("📱 Compartilhar WhatsApp", link, use_container_width=True)
+
+    # ABA 9 - LEMBRETES WHATSAPP
+    with tab9:
+        st.subheader("📱 Lembretes para Produção")
+        st.write("Envia mensagem 10h antes da entrega para os números cadastrados.")
+        df = carregar_dados()
+        if df.empty:
+            st.info("Nenhuma encomenda cadastrada.")
+        else:
+            agora = datetime.now()
+            limite = agora + timedelta(hours=10)
+            df_lembretes = df[df['Status'].isin(['Pendente', 'Em produção'])].copy()
+            df_lembretes['Data_Entrega_dt'] = pd.to_datetime(
+                df_lembretes['Data_Entrega'] + ' ' + df_lembretes['Hora_Entrega'],
+                format='%d/%m/%Y %H:%M', errors='coerce'
+            )
+            df_lembretes = df_lembretes[
+                (df_lembretes['Data_Entrega_dt'] > agora) &
+                (df_lembretes['Data_Entrega_dt'] <= limite)
+            ].sort_values('Data_Entrega_dt')
+
+            if df_lembretes.empty:
+                st.success("✅ Nenhum lembrete necessário agora. Nenhuma encomenda nas próximas 10 horas.")
+            else:
+                st.warning(f"⚠️ {len(df_lembretes)} encomenda(s) precisa(m) ser produzida(s) nas próximas 10h!")
+                for _, row in df_lembretes.iterrows():
+                    tempo_restante = row['Data_Entrega_dt'] - agora
+                    horas = int(tempo_restante.total_seconds() // 3600)
+                    minutos = int((tempo_restante.total_seconds() % 3600) // 60)
+                    with st.expander(f"🔔 {row['Cliente']} - Entrega em {horas}h {minutos}min"):
+                        st.write(f"**Cliente:** {row['Cliente']}")
+                        st.write(f"**Produto:** {row['Quantidade']}x {row['Produto']}")
+                        st.write(f"**Entrega:** {row['Data_Entrega']} às {row['Hora_Entrega']}")
+                        st.write(f"**Telefone Cliente:** {row['Telefone']}")
+                        if pd.notna(row['Observacoes']):
+                            st.write(f"**Obs:** {row['Observacoes']}")
+
+                        mensagem = f"""🔔 *LEMBRETE DE PRODUÇÃO - Salgados Oliveira*
+*Cliente:* {row['Cliente']}
+*Produto:* {row['Quantidade']}x {row['Produto']}
+*Entrega:* {row['Data_Entrega']} às {row['Hora_Entrega']}
+*Telefone:* {row['Telefone']}
+⏰ Faltam {horas}h {minutos}min para a entrega!
+{f"Obs: {row['Observacoes']}" if pd.notna(row['Observacoes']) else ""}"""
+                        mensagem_encoded = urllib.parse.quote(mensagem)
+                        st.divider()
+                        col1, col2 = st.columns(2)
+                        for idx, numero in enumerate(NUMEROS_PRODUCAO):
+                            link = f"https://wa.me/{numero}?text={mensagem_encoded}"
+                            coluna = col1 if idx == 0 else col2
+                            coluna.link_button(
+                                f"📱 Enviar para {numero[-9:]}",
+                                link, use_container_width=True
+                            )
+
+    # ABA 10 - CONFIGURAÇÕES
+    with tab10:
+        st.subheader("⚙️ Configurações")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Logo da Empresa**")
+            if os.path.exists(LOGO_PATH):
+                st.image(LOGO_PATH, width=200)
+                if st.button("Remover Logo"):
+                    os.remove(LOGO_PATH)
+                    st.success("Logo removida!")
+                    st.rerun()
+            else:
+                st.info("Nenhuma logo enviada")
+            uploaded = st.file_uploader("Enviar logo", type=['png', 'jpg', 'jpeg'])
+            if uploaded:
+                with open(LOGO_PATH, "wb") as f:
+                    f.write(uploaded.getbuffer())
+                st.success("Logo enviada!")
+                st.rerun()
+        with col2:
+            st.markdown("**Lembretes WhatsApp**")
+            st.info("Mensagens são enviadas para:")
+            for num in NUMEROS_PRODUCAO:
+                st.write(f"📱 +{num}")
+            st.markdown("---")
+            st.markdown("**Sobre o App**")
+            st.write("Versão: 3.0")
+            st.write("Desenvolvido para Salgados Oliveira")
 
 # CONTROLE DE LOGIN
 if 'logado' not in st.session_state:
