@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date
 
-# Configurações da página
+# Configurações
 st.set_page_config(
     page_title="Salgados Oliveira - Encomendas", 
     page_icon="🥟",
     layout="wide"
 )
 
-# Título
 st.title("🥟 Salgados Oliveira")
 st.subheader("Sistema de Encomendas")
 st.write("---")
@@ -29,6 +28,14 @@ def salvar_encomenda(nome, telefone, data_entrega, salgados, obs):
         "Obs": obs,
         "Status": "Pendente"
     })
+
+def marcar_entregue(index):
+    if index < len(st.session_state.encomendas):
+        st.session_state.encomendas[index]["Status"] = "Entregue"
+
+def excluir_encomenda(index):
+    if index < len(st.session_state.encomendas):
+        st.session_state.encomendas.pop(index)
 
 # Formulário
 with st.container():
@@ -73,32 +80,39 @@ with st.container():
                     st.warning("Pedido mínimo: 10 salgados")
             else:
                 st.error("Preencha nome e telefone")
-    
-    with col2:
-        if st.button("📄 Imprimir Pedido", use_container_width=True):
-            st.write("Função de impressão aqui...")
-    
-    with col3:
-        if st.button("❌ Cancelar", use_container_width=True):
-            st.session_state.encomendas = []
-            st.warning("Todas as encomendas foram canceladas")
 
 # Lista de encomendas
 st.write("---")
-st.header("📦 Encomendas Registradas")
+st.header("📦 Encomendas")
 
 if st.session_state.encomendas:
+    # Atualiza status automaticamente
+    hoje = date.today()
+    for i, enc in enumerate(st.session_state.encomendas):
+        data_entrega = datetime.strptime(enc["Entrega"], "%d/%m/%Y").date()
+        if data_entrega < hoje and enc["Status"] == "Pendente":
+            st.session_state.encomendas[i]["Status"] = "Entregue"
+    
     df = pd.DataFrame(st.session_state.encomendas)
     st.dataframe(df, use_container_width=True)
     
-    # Relatórios
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📊 Relatório Semanal", use_container_width=True):
-            st.write("Relatório semanal...")
-    with col2:
-        if st.button("📈 Relatório Mensal", use_container_width=True):
-            st.write("Relatório mensal...")
+    # Ações
+    for i, enc in enumerate(st.session_state.encomendas):
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            if st.button(f"👀 Ver {i}", use_container_width=True):
+                st.write(enc)
+        with col2:
+            if st.button(f"✏️ Editar {i}", use_container_width=True):
+                st.write("Editar aqui...")
+        with col3:
+            if st.button(f"✅ Entregue {i}", use_container_width=True):
+                marcar_entregue(i)
+                st.rerun()
+        with col4:
+            if st.button(f"🗑️ Excluir {i}", use_container_width=True):
+                excluir_encomenda(i)
+                st.rerun()
 else:
     st.info("Nenhuma encomenda registrada ainda")
 
