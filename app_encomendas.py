@@ -4,6 +4,7 @@ from datetime import datetime, date, timedelta
 import os
 import base64
 import streamlit.components.v1 as components
+import json
 
 st.set_page_config(
     page_title="Salgados Oliveira",
@@ -72,18 +73,6 @@ h1 {
     background: white;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-@media print {
-  .stButton,.stTabs,header,footer,.stSidebar,[data-testid="stToolbar"],[data-testid="stDecoration"],.stDataFrame {
-        display: none!important;
-    }
-  .main {
-        background: white!important;
-    }
-  .block-container {
-        padding: 1rem!important;
-        max-width: 100%!important;
-    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -166,19 +155,20 @@ def imprimir_tabela(df, titulo="Relatório de Encomendas"):
         st.info("Nada para imprimir.")
         return
 
-    # Monta HTML da tabela
     html_tabela = f"""
     <html>
     <head>
+        <title>{titulo} - Salgados Oliveira</title>
         <style>
             body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h1 {{ color: #FF6B35; text-align: center; }}
-            h2 {{ text-align: center; color: #333; }}
+            h1 {{ color: #FF6B35; text-align: center; margin-bottom: 5px; }}
+            h2 {{ text-align: center; color: #333; margin-top: 0; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
             th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }}
             th {{ background-color: #FF6B35; color: white; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
-           .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
+          .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
+          .rodape {{ text-align: center; margin-top: 30px; font-size: 10px; color: #999; }}
         </style>
     </head>
     <body>
@@ -202,14 +192,17 @@ def imprimir_tabela(df, titulo="Relatório de Encomendas"):
     html_tabela += """
             </tbody>
         </table>
-        <script>window.onload = function() { window.print(); }</script>
+        <p class="rodape">Sistema de Gestão de Encomendas - Salgados Oliveira</p>
     </body>
     </html>
     """
 
+    # Escapa o HTML pra jogar no JS sem quebrar
+    html_escaped = json.dumps(html_tabela)
+
     components.html(
         f"""
-        <button onclick="var w = window.open(); w.document.write(`{html_tabela}`); w.document.close();"
+        <button onclick="var w = window.open(); w.document.write({html_escaped}); w.document.close();"
         style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%;">
         🖨️ Imprimir Relatório</button>
         """,
@@ -577,7 +570,7 @@ def app_principal():
 
         st.markdown("---")
         st.markdown("**3. Informações**")
-        st.info("Sistema Salgados Oliveira v2.2 - Impressão corrigida + Edição + Pagamento")
+        st.info("Sistema Salgados Oliveira v2.3 - Impressão sob demanda + Edição + Pagamento")
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
