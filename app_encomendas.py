@@ -144,12 +144,13 @@ def card_metrica(titulo, valor, icone, cor):
 
 def gerar_html_impressao(df, titulo="Relatório de Encomendas"):
     html = f"""<!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{titulo} - Salgados Oliveira</title>
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        body {{ font-family: Arial, sans-serif; margin: 20px; color: #333; }}
         h1 {{ color: #FF6B35; text-align: center; margin-bottom: 5px; }}
         h2 {{ text-align: center; color: #333; margin-top: 0; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
@@ -158,14 +159,14 @@ def gerar_html_impressao(df, titulo="Relatório de Encomendas"):
         tr:nth-child(even) {{ background-color: #f9f9f9; }}
        .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
        .rodape {{ text-align: center; margin-top: 30px; font-size: 10px; color: #999; }}
-        @media print {{ button {{ display: none; }} }}
+        @media print {{.no-print {{ display: none; }} }}
     </style>
 </head>
 <body>
     <h1>🥟 Salgados Oliveira</h1>
     <h2>{titulo}</h2>
     <p class="info">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-    <button onclick="window.print()" style="background:#FF6B35;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;margin-bottom:15px;">🖨️ Imprimir Esta Página</button>
+    <button class="no-print" onclick="window.print()" style="background:#FF6B35;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;margin-bottom:15px;">🖨️ Imprimir Esta Página</button>
     <table>
         <thead>
             <tr>
@@ -187,16 +188,6 @@ def gerar_html_impressao(df, titulo="Relatório de Encomendas"):
     </body>
     </html>"""
     return html
-
-def botao_imprimir(df, titulo="Relatório de Encomendas"):
-    if df.empty:
-        st.info("Nada para imprimir.")
-        return
-    
-    html_content = gerar_html_impressao(df, titulo)
-    b64 = base64.b64encode(html_content.encode()).decode()
-    href = f'<a href="data:text/html;base64,{b64}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#FF6B35 0%,#F7931E 100%);color:white;padding:12px 24px;border-radius:10px;font-weight:600;text-decoration:none;width:100%;text-align:center;box-sizing:border-box;">🖨️ Gerar Página para Impressão</a>'
-    st.markdown(href, unsafe_allow_html=True)
 
 def login():
     col1, col2, col3 = st.columns([1,2,1])
@@ -239,7 +230,7 @@ def app_principal():
     st.markdown("---")
 
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-        "📊 Dashboard", "➕ Nova", "📋 Ver", "✏️ Editar", "✅ Entregue/Cancelada", "🗑️ Excluir", "📊 Relatório", "⚙️ Configurações"
+        "📊 Dashboard", "➕ Nova", "📋 Ver", "✏️ Editar", "✅ Atualizar Status", "🗑️ Excluir", "📊 Relatório", "⚙️ Configurações"
     ])
 
     with tab1:
@@ -379,7 +370,17 @@ def app_principal():
 
             col1, col2 = st.columns(2)
             with col1:
-                botao_imprimir(df_filtrado, "Lista de Encomendas")
+                if not df_filtrado.empty:
+                    html_content = gerar_html_impressao(df_filtrado, "Lista de Encomendas")
+                    st.download_button(
+                        label="🖨️ Baixar Página para Impressão",
+                        data=html_content,
+                        file_name=f"impressao_encomendas_{date.today()}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+                else:
+                    st.info("Nada para imprimir.")
             with col2:
                 csv = df_filtrado.to_csv(index=False)
                 b64 = base64.b64encode(csv.encode()).decode()
@@ -441,7 +442,7 @@ def app_principal():
                         st.rerun()
 
     with tab5:
-        st.subheader("✅ Marcar como Entregue ou Cancelada")
+        st.subheader("✅ Atualizar Status da Encomenda")
         df = carregar_dados()
         df_ativas = df[df['Status'].isin(['Pendente', 'Em produção', 'Pronto'])]
         if df_ativas.empty:
@@ -460,18 +461,19 @@ def app_principal():
             st.markdown(f"**Entrega:** {df.loc[index, 'Data_Entrega']} às {df.loc[index, 'Hora_Entrega']}")
             st.markdown(f"**Pagamento:** {df.loc[index, 'Forma_Pagamento']}")
 
+            st.markdown("---")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("✅ Marcar como Entregue", use_container_width=True, type="primary"):
+                if st.button("✅ Marcar como ENTREGUE", use_container_width=True, type="primary"):
                     df.loc[index, 'Status'] = 'Entregue'
                     salvar_dados(df)
-                    st.success("Status atualizado para Entregue!")
+                    st.success("✅ Status atualizado para Entregue!")
                     st.rerun()
             with col2:
-                if st.button("❌ Cancelar Encomenda", use_container_width=True):
+                if st.button("❌ Marcar como CANCELADA", use_container_width=True):
                     df.loc[index, 'Status'] = 'Cancelada'
                     salvar_dados(df)
-                    st.success("Encomenda cancelada!")
+                    st.success("❌ Encomenda cancelada!")
                     st.rerun()
 
     with tab6:
@@ -506,13 +508,14 @@ def app_principal():
             st.info("📭 Nenhuma encomenda cadastrada ainda.")
         else:
             df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+            st.markdown("**Selecione o período do relatório:**")
             col1, col2, col3 = st.columns(3)
             with col1:
-                data_inicio = st.date_input("Data Início", value=date.today() - timedelta(days=30))
+                data_inicio = st.date_input("Data Início", value=date.today() - timedelta(days=30), key="data_inicio_rel")
             with col2:
-                data_fim = st.date_input("Data Fim", value=date.today())
+                data_fim = st.date_input("Data Fim", value=date.today(), key="data_fim_rel")
             with col3:
-                status_filtro = st.multiselect("Status", ['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'], default=['Entregue'])
+                status_filtro = st.multiselect("Status", ['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'], default=['Entregue'], key="status_rel")
 
             df['Data_Entrega_dt'] = pd.to_datetime(df['Data_Entrega'], format='%d/%m/%Y', errors='coerce')
             df_relatorio = df[
@@ -529,9 +532,24 @@ def app_principal():
 
             st.dataframe(df_relatorio[['Cliente', 'Produto', 'Quantidade', 'Valor', 'Data_Entrega', 'Status', 'Forma_Pagamento']], use_container_width=True, hide_index=True)
 
+            st.markdown("---")
+            st.subheader("📄 Gerar Impressão")
+            st.info(f"Relatório filtrado de {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}")
+            
             col1, col2 = st.columns(2)
             with col1:
-                botao_imprimir(df_relatorio, f"Relatório {data_inicio} a {data_fim}")
+                if not df_relatorio.empty:
+                    html_content = gerar_html_impressao(df_relatorio, f"Relatório {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+                    st.download_button(
+                        label="🖨️ Baixar Página para Impressão (.html)",
+                        data=html_content,
+                        file_name=f"relatorio_{data_inicio}_{data_fim}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+                    st.caption("Clique, abra o arquivo baixado e aperte Ctrl+P para imprimir")
+                else:
+                    st.info("Nada para imprimir no período selecionado.")
             with col2:
                 csv = df_relatorio.to_csv(index=False)
                 b64 = base64.b64encode(csv.encode()).decode()
@@ -565,7 +583,7 @@ def app_principal():
 
         st.markdown("---")
         st.markdown("**3. Informações**")
-        st.info("Sistema Salgados Oliveira v2.4 - Impressão via HTML + Edição + Pagamento")
+        st.info("Sistema Salgados Oliveira v3.0 - Botões separados + Impressão via download HTML")
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
