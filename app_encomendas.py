@@ -73,36 +73,17 @@ h1 {
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
-.impressao-tabela {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-.impressao-tabela th,.impressao-tabela td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-.impressao-tabela th {
-    background-color: #FF6B35;
-    color: white;
-}
 @media print {
-   .stButton,.stTabs, header, footer,.stSidebar, [data-testid="stToolbar"], [data-testid="stDecoration"] {
+  .stButton,.stTabs,header,footer,.stSidebar,[data-testid="stToolbar"],[data-testid="stDecoration"],.stDataFrame {
         display: none!important;
     }
-   .main {
+  .main {
         background: white!important;
     }
-   .block-container {
-        padding: 0!important;
+  .block-container {
+        padding: 1rem!important;
+        max-width: 100%!important;
     }
-   .impressao-area {
-        display: block!important;
-    }
-}
-.impressao-area {
-    display: none;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -180,22 +161,60 @@ def gerar_pdf_download(df, nome_arquivo):
     href = f'<a href="data:file/csv;base64,{b64}" download="{nome_arquivo}">📥 Baixar CSV</a>'
     return href
 
-def tabela_para_impressao(df):
+def imprimir_tabela(df, titulo="Relatório de Encomendas"):
     if df.empty:
-        return ""
-    html = '<div class="impressao-area"><h2>Relatório de Encomendas - Salgados Oliveira</h2>'
-    html += '<p>Data: ' + datetime.now().strftime('%d/%m/%Y %H:%M') + '</p>'
-    html += '<table class="impressao-tabela"><thead><tr>'
+        st.info("Nada para imprimir.")
+        return
+
+    # Monta HTML da tabela
+    html_tabela = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            h1 {{ color: #FF6B35; text-align: center; }}
+            h2 {{ text-align: center; color: #333; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }}
+            th {{ background-color: #FF6B35; color: white; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+           .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
+        </style>
+    </head>
+    <body>
+        <h1>🥟 Salgados Oliveira</h1>
+        <h2>{titulo}</h2>
+        <p class="info">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+        <table>
+            <thead>
+                <tr>
+    """
     for col in df.columns:
-        html += f'<th>{col}</th>'
-    html += '</tr></thead><tbody>'
+        html_tabela += f"<th>{col}</th>"
+    html_tabela += "</tr></thead><tbody>"
+
     for _, row in df.iterrows():
-        html += '<tr>'
+        html_tabela += "<tr>"
         for val in row:
-            html += f'<td>{val}</td>'
-        html += '</tr>'
-    html += '</tbody></table></div>'
-    return html
+            html_tabela += f"<td>{val}</td>"
+        html_tabela += "</tr>"
+
+    html_tabela += """
+            </tbody>
+        </table>
+        <script>window.onload = function() { window.print(); }</script>
+    </body>
+    </html>
+    """
+
+    components.html(
+        f"""
+        <button onclick="var w = window.open(); w.document.write(`{html_tabela}`); w.document.close();"
+        style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%;">
+        🖨️ Imprimir Relatório</button>
+        """,
+        height=50
+    )
 
 def login():
     col1, col2, col3 = st.columns([1,2,1])
@@ -376,25 +395,9 @@ def app_principal():
             df_filtrado = df[df['Status'].isin(filtro_status)]
             st.dataframe(df_filtrado, use_container_width=True, hide_index=True, height=400)
 
-            st.markdown(tabela_para_impressao(df_filtrado), unsafe_allow_html=True)
-
             col1, col2 = st.columns(2)
             with col1:
-                components.html(
-                    """
-                    <button onclick="window.print()" style="
-                        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-                        color: white;
-                        border: none;
-                        padding: 12px 24px;
-                        border-radius: 10px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        width: 100%;
-                    ">🖨️ Imprimir Página</button>
-                    """,
-                    height=50
-                )
+                imprimir_tabela(df_filtrado, "Lista de Encomendas")
             with col2:
                 st.markdown(gerar_pdf_download(df_filtrado, "encomendas_filtradas.csv"), unsafe_allow_html=True)
 
@@ -542,25 +545,9 @@ def app_principal():
 
             st.dataframe(df_relatorio[['Cliente', 'Produto', 'Quantidade', 'Valor', 'Data_Entrega', 'Status', 'Forma_Pagamento']], use_container_width=True, hide_index=True)
 
-            st.markdown(tabela_para_impressao(df_relatorio), unsafe_allow_html=True)
-
             col1, col2 = st.columns(2)
             with col1:
-                components.html(
-                    """
-                    <button onclick="window.print()" style="
-                        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-                        color: white;
-                        border: none;
-                        padding: 12px 24px;
-                        border-radius: 10px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        width: 100%;
-                    ">🖨️ Imprimir Relatório</button>
-                    """,
-                    height=50
-                )
+                imprimir_tabela(df_relatorio, f"Relatório {data_inicio} a {data_fim}")
             with col2:
                 st.markdown(gerar_pdf_download(df_relatorio, f"relatorio_{data_inicio}_{data_fim}.csv"), unsafe_allow_html=True)
 
@@ -590,7 +577,7 @@ def app_principal():
 
         st.markdown("---")
         st.markdown("**3. Informações**")
-        st.info("Sistema Salgados Oliveira v2.1 - Com edição, pagamento e impressão corrigida")
+        st.info("Sistema Salgados Oliveira v2.2 - Impressão corrigida + Edição + Pagamento")
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
