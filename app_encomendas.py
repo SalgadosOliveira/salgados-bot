@@ -157,8 +157,8 @@ def gerar_html_impressao(df, titulo="Relatório de Encomendas"):
         th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }}
         th {{ background-color: #FF6B35; color: white; }}
         tr:nth-child(even) {{ background-color: #f9f9f9; }}
-      .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
-      .rodape {{ text-align: center; margin-top: 30px; font-size: 10px; color: #999; }}
+     .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
+     .rodape {{ text-align: center; margin-top: 30px; font-size: 10px; color: #999; }}
         @media print {{.no-print {{ display: none; }} }}
     </style>
 </head>
@@ -598,17 +598,27 @@ def app_principal():
                 df_pendentes = df[df['Status'].isin(['Pendente', 'Em produção', 'Pronto'])]
                 st.dataframe(df_pendentes[['Cliente', 'Produto', 'Quantidade', 'Data_Entrega', 'Status']], use_container_width=True, hide_index=True)
 
-                col1, col2 = st.columns(2)
+                st.markdown("---")
+                col1, col2, col3 = st.columns(3)
                 with col1:
-                    html_content = gerar_html_impressao(df_pendentes[['Cliente', 'Produto', 'Quantidade', 'Data_Entrega', 'Status']], "Salgados Pendentes para Produção")
+                    html_salgados = gerar_html_impressao(df_salgados, "Totais de Salgados Pendentes para Produção")
                     st.download_button(
-                        label="🖨️ Baixar Lista de Produção (.html)",
-                        data=html_content,
-                        file_name=f"salgados_pendentes_{date.today()}.html",
+                        label="🖨️ Imprimir Totais de Salgados",
+                        data=html_salgados,
+                        file_name=f"totais_salgados_pendentes_{date.today()}.html",
                         mime="text/html",
                         use_container_width=True
                     )
                 with col2:
+                    html_lista = gerar_html_impressao(df_pendentes[['Cliente', 'Produto', 'Quantidade', 'Data_Entrega', 'Status']], "Lista de Encomendas Pendentes")
+                    st.download_button(
+                        label="🖨️ Imprimir Lista de Produção",
+                        data=html_lista,
+                        file_name=f"lista_producao_{date.today()}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+                with col3:
                     csv = df_pendentes.to_csv(index=False)
                     b64 = base64.b64encode(csv.encode()).decode()
                     st.markdown(f'<a href="data:file/csv;base64,{b64}" download="salgados_pendentes.csv">📥 Baixar CSV</a>', unsafe_allow_html=True)
@@ -641,7 +651,7 @@ def app_principal():
 
         st.markdown("---")
         st.markdown("**3. Informações**")
-        st.info("Sistema Salgados Oliveira v3.1 - Botões separados + Salgados Pendentes + Impressão HTML")
+        st.info("Sistema Salgados Oliveira v3.2 - Botões separados + Impressão Salgados Pendentes")
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
