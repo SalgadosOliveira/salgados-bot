@@ -591,3 +591,74 @@ if st.session_state['logado']:
     app_principal()
 else:
     login()
+# ... (restante do código não mudou)
+
+with tab7:
+    st.subheader("📊 Relatório de Encomendas")
+    df = carregar_dados()
+    if df.empty:
+        st.info("📭 Nenhuma encomenda cadastrada ainda.")
+    else:
+        df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            data_inicio = st.date_input("Data Início", value=date.today() - timedelta(days=30), key="data_inicio_rel")
+        with col2:
+            data_fim = st.date_input("Data Fim", value=date.today(), key="data_fim_rel")
+        with col3:
+            status_filtro = st.multiselect("Status", ['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'], default=['Entregue'], key="status_rel")
+
+        df['Data_Entrega_dt'] = pd.to_datetime(df['Data_Entrega'], format='%d/%m/%Y', errors='coerce')
+        df_relatorio = df[
+            (df['Data_Entrega_dt'].dt.date >= data_inicio) &
+            (df['Data_Entrega_dt'].dt.date <= data_fim) &
+            (df['Status'].isin(status_filtro))
+        ]
+
+        st.markdown("---")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Encomendas", len(df_relatorio))
+        col2.metric("Valor Total", f"R$ {df_relatorio['Valor'].sum():.2f}")
+        col3.metric("Média por Pedido", f"R$ {df_relatorio['Valor'].mean():.2f}" if len(df_relatorio) > 0 else "R$ 0.00")
+
+        st.dataframe(df_relatorio[['Cliente', 'Produto', 'Quantidade', 'Valor', 'Data_Entrega', 'Status', 'Forma_Pagamento']], use_container_width=True, hide_index=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            botao_imprimir(df_relatorio, f"Relatório {data_inicio} a {data_fim}")
+        with col2:
+            csv = df_relatorio.to_csv(index=False)
+            b64 = base64.b64encode(csv.encode()).decode()
+            st.markdown(f'<a href="data:file/csv;base64,{b64}" download="relatorio_{data_inicio}_{data_fim}.csv">📥 Baixar CSV</a>', unsafe_allow_html=True)
+
+with tab8:
+    st.subheader("📊 Relatório de Salgados Pendentes")
+    df = carregar_dados()
+    if df.empty:
+        st.info("📭 Nenhuma encomenda cadastrada ainda.")
+    else:
+        df_pendentes = df[df['Status'].isin(['Pendente', 'Em produção', 'Pronto'])]
+        if df_pendentes.empty:
+            st.info("📭 Nenhuma encomenda pendente.")
+        else:
+            salgados_pendentes = {}
+            for _, row in df_pendentes.iterrows():
+                produtos = row['Produto'].split(', ')
+                for produto in produtos:
+                    qtd, nome = produto.split('x ')
+                    qtd = int(qtd)
+                    if nome in salgados_pendentes:
+                        salgados_pendentes[nome] += qtd
+                    else:
+                        salgados_pendentes[nome] = qtd
+
+            st.markdown("**Total de Salgados Pendentes:**")
+            for salgado, qtd in salgados_pendentes.items():
+                st.markdown(f"• {salgado}: **{qtd} unidades**")
+
+            st.markdown("---")
+            st.dataframe(df_pendentes[['Cliente', 'Produto', 'Quantidade', 'Data_Entrega', 'Status']], use_container_width=True, hide_index=True)
+
+            csv = df_pendentes.to_csv(index=False)
+            b64 = base64.b64encode(csv.encode()).decode()
+            st.markdown(f'<a href="data:file/csv;base64,{b64}" download="salgados_pendentes.csv">📥 Baixar CSV</a>', unsafe_allow_html=True)
