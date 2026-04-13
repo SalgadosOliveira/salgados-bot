@@ -3,8 +3,6 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import os
 import base64
-import streamlit.components.v1 as components
-import json
 
 st.set_page_config(
     page_title="Salgados Oliveira",
@@ -144,70 +142,61 @@ def card_metrica(titulo, valor, icone, cor):
         </div>
     """, unsafe_allow_html=True)
 
-def gerar_pdf_download(df, nome_arquivo):
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="{nome_arquivo}">📥 Baixar CSV</a>'
-    return href
-
-def imprimir_tabela(df, titulo="Relatório de Encomendas"):
-    if df.empty:
-        st.info("Nada para imprimir.")
-        return
-
-    html_tabela = f"""
-    <html>
-    <head>
-        <title>{titulo} - Salgados Oliveira</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h1 {{ color: #FF6B35; text-align: center; margin-bottom: 5px; }}
-            h2 {{ text-align: center; color: #333; margin-top: 0; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }}
-            th {{ background-color: #FF6B35; color: white; }}
-            tr:nth-child(even) {{ background-color: #f9f9f9; }}
-          .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
-          .rodape {{ text-align: center; margin-top: 30px; font-size: 10px; color: #999; }}
-        </style>
-    </head>
-    <body>
-        <h1>🥟 Salgados Oliveira</h1>
-        <h2>{titulo}</h2>
-        <p class="info">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-        <table>
-            <thead>
-                <tr>
-    """
+def gerar_html_impressao(df, titulo="Relatório de Encomendas"):
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{titulo} - Salgados Oliveira</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        h1 {{ color: #FF6B35; text-align: center; margin-bottom: 5px; }}
+        h2 {{ text-align: center; color: #333; margin-top: 0; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }}
+        th {{ background-color: #FF6B35; color: white; }}
+        tr:nth-child(even) {{ background-color: #f9f9f9; }}
+       .info {{ text-align: center; margin-bottom: 20px; color: #666; }}
+       .rodape {{ text-align: center; margin-top: 30px; font-size: 10px; color: #999; }}
+        @media print {{ button {{ display: none; }} }}
+    </style>
+</head>
+<body>
+    <h1>🥟 Salgados Oliveira</h1>
+    <h2>{titulo}</h2>
+    <p class="info">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+    <button onclick="window.print()" style="background:#FF6B35;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;margin-bottom:15px;">🖨️ Imprimir Esta Página</button>
+    <table>
+        <thead>
+            <tr>
+"""
     for col in df.columns:
-        html_tabela += f"<th>{col}</th>"
-    html_tabela += "</tr></thead><tbody>"
+        html += f"<th>{col}</th>"
+    html += "</tr></thead><tbody>"
 
     for _, row in df.iterrows():
-        html_tabela += "<tr>"
+        html += "<tr>"
         for val in row:
-            html_tabela += f"<td>{val}</td>"
-        html_tabela += "</tr>"
+            html += f"<td>{val}</td>"
+        html += "</tr>"
 
-    html_tabela += """
+    html += """
             </tbody>
         </table>
         <p class="rodape">Sistema de Gestão de Encomendas - Salgados Oliveira</p>
     </body>
-    </html>
-    """
+    </html>"""
+    return html
 
-    # Escapa o HTML pra jogar no JS sem quebrar
-    html_escaped = json.dumps(html_tabela)
-
-    components.html(
-        f"""
-        <button onclick="var w = window.open(); w.document.write({html_escaped}); w.document.close();"
-        style="background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%;">
-        🖨️ Imprimir Relatório</button>
-        """,
-        height=50
-    )
+def botao_imprimir(df, titulo="Relatório de Encomendas"):
+    if df.empty:
+        st.info("Nada para imprimir.")
+        return
+    
+    html_content = gerar_html_impressao(df, titulo)
+    b64 = base64.b64encode(html_content.encode()).decode()
+    href = f'<a href="data:text/html;base64,{b64}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#FF6B35 0%,#F7931E 100%);color:white;padding:12px 24px;border-radius:10px;font-weight:600;text-decoration:none;width:100%;text-align:center;box-sizing:border-box;">🖨️ Gerar Página para Impressão</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 def login():
     col1, col2, col3 = st.columns([1,2,1])
@@ -390,9 +379,11 @@ def app_principal():
 
             col1, col2 = st.columns(2)
             with col1:
-                imprimir_tabela(df_filtrado, "Lista de Encomendas")
+                botao_imprimir(df_filtrado, "Lista de Encomendas")
             with col2:
-                st.markdown(gerar_pdf_download(df_filtrado, "encomendas_filtradas.csv"), unsafe_allow_html=True)
+                csv = df_filtrado.to_csv(index=False)
+                b64 = base64.b64encode(csv.encode()).decode()
+                st.markdown(f'<a href="data:file/csv;base64,{b64}" download="encomendas_filtradas.csv">📥 Baixar CSV</a>', unsafe_allow_html=True)
 
     with tab4:
         st.subheader("✏️ Editar Encomenda")
@@ -540,9 +531,11 @@ def app_principal():
 
             col1, col2 = st.columns(2)
             with col1:
-                imprimir_tabela(df_relatorio, f"Relatório {data_inicio} a {data_fim}")
+                botao_imprimir(df_relatorio, f"Relatório {data_inicio} a {data_fim}")
             with col2:
-                st.markdown(gerar_pdf_download(df_relatorio, f"relatorio_{data_inicio}_{data_fim}.csv"), unsafe_allow_html=True)
+                csv = df_relatorio.to_csv(index=False)
+                b64 = base64.b64encode(csv.encode()).decode()
+                st.markdown(f'<a href="data:file/csv;base64,{b64}" download="relatorio_{data_inicio}_{data_fim}.csv">📥 Baixar CSV</a>', unsafe_allow_html=True)
 
     with tab8:
         st.subheader("⚙️ Configurações do Sistema")
@@ -564,13 +557,15 @@ def app_principal():
         st.markdown("**2. Backup de Dados**")
         df = carregar_dados()
         if not df.empty:
-            st.markdown(gerar_pdf_download(df, f"backup_encomendas_{date.today()}.csv"), unsafe_allow_html=True)
+            csv = df.to_csv(index=False)
+            b64 = base64.b64encode(csv.encode()).decode()
+            st.markdown(f'<a href="data:file/csv;base64,{b64}" download="backup_encomendas_{date.today()}.csv">📥 Baixar Backup Completo</a>', unsafe_allow_html=True)
         else:
             st.info("Nenhum dado para backup ainda.")
 
         st.markdown("---")
         st.markdown("**3. Informações**")
-        st.info("Sistema Salgados Oliveira v2.3 - Impressão sob demanda + Edição + Pagamento")
+        st.info("Sistema Salgados Oliveira v2.4 - Impressão via HTML + Edição + Pagamento")
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
