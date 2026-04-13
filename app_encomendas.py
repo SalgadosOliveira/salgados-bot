@@ -149,9 +149,10 @@ def login():
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         if os.path.exists(LOGO_PATH):
             st.image(LOGO_PATH, width=150)
-        # LINHA CORRIGIDA: troquei aspas simples por duplas no style
-        st.markdown('<h1 style="text-align: center; color: #FF6B35;">🥟 Salgados Oliveira</h1>', unsafe_allow_html=True)
-        st.markdown('<p style="text-align: center; color: #888;">Sistema de Gestão de Encomendas</p>', unsafe_allow_html=True)
+        st.markdown('<h1 style="text-align: center; color:                                                                
+        st.markdown('#FF6B35;">🥟 Salgados Oliveira</h1>', unsafe_allow_html=True)
+        st.markdown('<p style="text-align: center; color:                                                                      
+        st.markdown("#888;">Sistema de Gestão de Encomendas</p>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         with st.form("login_form"):
             usuario = st.text_input("👤 Usuário", placeholder="Digite seu usuário")
@@ -165,7 +166,18 @@ def login():
                     st.error("❌ Usuário ou senha incorretos!")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# APP PRINCIPAL
+               
+def app_principal():
+    if 'produtos' not in st.session_state:
+        st.session_state.produtos = []
+
+            
+    col1, col2, col3 = st.columns([1,3,1])
+    with col1:
+        if os.path.exists(LOGO_PATH):
+            st.image(LOGO_PATH, width=80)
+    with col2:
+        st.markdown('<h1 style="# APP PRINCIPAL
 def app_principal():
     if 'produtos' not in st.session_state:
         st.session_state.produtos = []
@@ -183,12 +195,18 @@ def app_principal():
             st.rerun()
     st.markdown("---")
 
-    # ABAS
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Dashboard", "➕ Nova", "📋 Ver", "✏️ Editar", "🗑️ Excluir"
+          
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "# ABAS
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "📊 Dashboard", "➕ Nova", "📋 Ver", "✏️ Editar", "🗑️ Excluir", "📊 Relatório", "⚙️ Configurações"
     ])
 
-    # ABA 1 - DASHBOARD
+                       
+    with tab1:
+        df = carregar_dados()
+        if df.empty:
+            st.info("# ABA 1 - DASHBOARD
     with tab1:
         df = carregar_dados()
         if df.empty:
@@ -204,179 +222,4 @@ def app_principal():
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                card_metrica("Hoje", f"R$ {fat_hoje:.2f}", "💰", "#FF6B35")
-            with col2:
-                card_metrica("Semana", f"R$ {fat_semana:.2f}", "📈", "#F7931E")
-            with col3:
-                card_metrica("Entregue", f"R$ {fat_total:.2f}", "✅", "#00C851")
-            with col4:
-                card_metrica("Pendentes", str(pedidos_pendentes), "⏰", "#ff4444")
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            col1, col2 = st.columns([2,1])
-            with col1:
-                st.subheader("📊 Faturamento por Data")
-                df_grafico = df[(~df['Status'].isin(['Entregue', 'Cancelada']))].copy()
-                df_grafico = df_grafico[df_grafico['Data_Entrega'].notna()]
-                if not df_grafico.empty:
-                    df_chart = df_grafico.groupby('Data_Entrega')['Valor'].sum().reset_index()
-                    st.bar_chart(df_chart.set_index('Data_Entrega'))
-                else:
-                    st.info("Sem dados para exibir ainda.")
-            with col2:
-                st.subheader("🔔 Próximas Entregas")
-                proximas = df[df['Status'].isin(['Pendente', 'Em produção', 'Pronto'])].sort_values('Data_Entrega_dt').head(5)
-                if not proximas.empty:
-                    for _, row in proximas.iterrows():
-                        st.markdown(f"""
-                        <div style='background: white; padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid #FF6B35;'>
-                            <strong>{row['Cliente']}</strong><br>
-                            <span style='color: #888; font-size: 13px;'>📅 {row['Data_Entrega']} às {row['Hora_Entrega']}</span><br>
-                            <span style='color: #FF6B35; font-weight: 600;'>R$ {row['Valor']:.2f}</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("Nenhuma entrega pendente.")
-
-    # ABA 2 - NOVA ENCOMENDA
-    with tab2:
-        st.subheader("➕ Cadastrar Nova Encomenda")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**Dados do Cliente**")
-            cliente = st.text_input("Nome*", placeholder="Nome completo", key="nome")
-            telefone = st.text_input("WhatsApp", placeholder="(87) 99999-9999", key="tel")
-        with col2:
-            st.markdown("**Detalhes do Pedido**")
-            valor = st.number_input("Valor Total R$*", min_value=0.0, step=0.50, format="%.2f", key="val")
-            data_entrega = st.date_input("Data de Entrega*", value=date.today(), key="data")
-            hora_entrega = st.time_input("Hora de Entrega*", key="hora")
-
-        st.markdown("---")
-        st.markdown("**Produtos* (selecione os salgados e a quantidade)**")
-        col1, col2, col3 = st.columns([3,2,2])
-        with col1:
-            salgado_escolhido = st.selectbox("Tipo de salgado", SALGADOS, key="salgado")
-        with col2:
-            quantidade = st.number_input("Quantidade", min_value=1, step=1, key="qtd")
-        with col3:
-            st.write("")
-            if st.button("➕ Adicionar", use_container_width=True):
-                st.session_state.produtos.append({"produto": salgado_escolhido, "quantidade": quantidade})
-                st.rerun()
-
-        if st.session_state.produtos:
-            st.markdown("**Produtos adicionados:**")
-            total_qtd = 0
-            for i, p in enumerate(st.session_state.produtos):
-                col1, col2 = st.columns([4,1])
-                col1.write(f"• {p['quantidade']}x {p['produto']}")
-                if col2.button("🗑️", key=f"rem_{i}"):
-                    st.session_state.produtos.pop(i)
-                    st.rerun()
-                total_qtd += p['quantidade']
-            st.info(f"Total: {total_qtd} salgados")
-        else:
-            st.warning("⚠️ Adicione pelo menos 1 produto")
-
-        observacoes = st.text_area("📝 Observações", placeholder="Alguma observação especial?", key="obs")
-
-        if st.button("💾 Salvar Encomenda", use_container_width=True, type="primary"):
-            if cliente and st.session_state.produtos and valor > 0:
-                df = carregar_dados()
-                produtos_texto = ", ".join([f"{p['quantidade']}x {p['produto']}" for p in st.session_state.produtos])
-                nova_linha = pd.DataFrame([{
-                    'Data_Pedido': datetime.now().strftime('%d/%m/%Y %H:%M'),
-                    'Cliente': cliente,
-                    'Telefone': telefone,
-                    'Produto': produtos_texto,
-                    'Quantidade': sum([p['quantidade'] for p in st.session_state.produtos]),
-                    'Valor': valor,
-                    'Data_Entrega': data_entrega.strftime('%d/%m/%Y'),
-                    'Hora_Entrega': hora_entrega.strftime('%H:%M'),
-                    'Status': 'Pendente',
-                    'Observacoes': observacoes
-                }])
-                df = pd.concat([df, nova_linha], ignore_index=True)
-                salvar_dados(df)
-                st.success(f"✅ Encomenda de {cliente} salva com sucesso!")
-                st.session_state.produtos = []
-                st.balloons()
-                st.rerun()
-            else:
-                st.error("❌ Preencha nome, valor e adicione pelo menos 1 produto")
-
-    # ABA 3 - VER ENCOMENDAS
-    with tab3:
-        st.subheader("📋 Todas as Encomendas")
-        df = carregar_dados()
-        if df.empty:
-            st.info("📭 Nenhuma encomenda cadastrada ainda.")
-        else:
-            filtro_status = st.multiselect(
-                "Filtrar por Status",
-                options=['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'],
-                default=['Pendente', 'Em produção', 'Pronto']
-            )
-            df_filtrado = df[df['Status'].isin(filtro_status)]
-            st.dataframe(df_filtrado, use_container_width=True, hide_index=True, height=400)
-
-    # ABA 4 - EDITAR STATUS
-    with tab4:
-        st.subheader("✏️ Atualizar Status")
-        st.info("💡 Encomendas são marcadas como 'Entregue' automaticamente após a data/hora passar.")
-        df = carregar_dados()
-        if df.empty:
-            st.info("📭 Nenhuma encomenda para editar.")
-        else:
-            df['Opcao'] = df.index.astype(str) + " - " + df['Cliente'] + " - " + df['Produto'] + " - " + df['Data_Entrega']
-            encomenda_selecionada = st.selectbox("Selecione a encomenda", df['Opcao'])
-            index = int(encomenda_selecionada.split(" - ")[0])
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Cliente", df.loc[index, 'Cliente'])
-            col2.metric("Produto", str(df.loc[index, 'Produto'])[:30]+"...")
-            col3.metric("Status Atual", df.loc[index, 'Status'])
-            novo_status = st.selectbox(
-                "Novo Status",
-                ['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'],
-                index=['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'].index(df.loc[index, 'Status'])
-            )
-            if st.button("✅ Atualizar Status", use_container_width=True):
-                df.loc[index, 'Status'] = novo_status
-                salvar_dados(df)
-                st.success("Status atualizado com sucesso!")
-                st.rerun()
-
-    # ABA 5 - EXCLUIR
-    with tab5:
-        st.subheader("🗑️ Excluir Encomenda")
-        st.warning("⚠️ Atenção: Esta ação não pode ser desfeita!")
-        df = carregar_dados()
-        if df.empty:
-            st.info("📭 Nenhuma encomenda para excluir.")
-        else:
-            df['Opcao'] = df.index.astype(str) + " - " + df['Cliente'] + " - " + df['Produto'] + " - " + df['Data_Entrega']
-            encomenda_selecionada = st.selectbox("Selecione a encomenda para excluir", df['Opcao'])
-            index = int(encomenda_selecionada.split(" - ")[0])
-            st.markdown("---")
-            col1, col2 = st.columns(2)
-            col1.write(f"**Cliente:** {df.loc[index, 'Cliente']}")
-            col1.write(f"**Produto:** {df.loc[index, 'Produto']}")
-            col2.write(f"**Valor:** R$ {df.loc[index, 'Valor']:.2f}")
-            col2.write(f"**Data:** {df.loc[index, 'Data_Entrega']}")
-            st.markdown("---")
-            confirmar = st.checkbox("Sim, tenho certeza que quero excluir esta encomenda")
-            if st.button("🗑️ Excluir Definitivamente", use_container_width=True, disabled=not confirmar):
-                nome_cliente = df.loc[index, 'Cliente']
-                df = df.drop(index).reset_index(drop=True)
-                salvar_dados(df)
-                st.success(f"Encomenda de {nome_cliente} excluída!")
-                st.rerun()
-
-# CONTROLE DE LOGIN
-if 'logado' not in st.session_state:
-    st.session_state['logado'] = False
-if st.session_state['logado']:
-    app_principal()
-else:
-    login()
+                card_metrica("Hoje", f"R
