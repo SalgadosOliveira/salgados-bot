@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import os
 import base64
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Salgados Oliveira",
@@ -72,13 +73,36 @@ h1 {
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
+.impressao-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+.impressao-tabela th,.impressao-tabela td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.impressao-tabela th {
+    background-color: #FF6B35;
+    color: white;
+}
 @media print {
-.stButton,.stTabs,header,footer,.stSidebar,[data-testid="stToolbar"],.element-container:has(.stButton) {
+   .stButton,.stTabs, header, footer,.stSidebar, [data-testid="stToolbar"], [data-testid="stDecoration"] {
         display: none!important;
     }
-.main {
+   .main {
         background: white!important;
     }
+   .block-container {
+        padding: 0!important;
+    }
+   .impressao-area {
+        display: block!important;
+    }
+}
+.impressao-area {
+    display: none;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -128,7 +152,6 @@ def carregar_dados():
             df = pd.read_csv(ARQUIVO_CSV)
             if df.empty:
                 return pd.DataFrame(columns=colunas)
-            # Garante que a coluna nova exista em CSVs antigos
             if 'Forma_Pagamento' not in df.columns:
                 df['Forma_Pagamento'] = 'A vista'
             df = atualizar_status_automatico(df)
@@ -149,7 +172,6 @@ def card_metrica(titulo, valor, icone, cor):
             </div>
             <div style="font-size: 40px;">{icone}</div>
         </div>
-    </div>
     """, unsafe_allow_html=True)
 
 def gerar_pdf_download(df, nome_arquivo):
@@ -158,19 +180,22 @@ def gerar_pdf_download(df, nome_arquivo):
     href = f'<a href="data:file/csv;base64,{b64}" download="{nome_arquivo}">📥 Baixar CSV</a>'
     return href
 
-def botao_imprimir():
-    st.markdown("""
-    <button onclick="window.print()" style="
-        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-    ">🖨️ Imprimir Página</button>
-    """, unsafe_allow_html=True)
+def tabela_para_impressao(df):
+    if df.empty:
+        return ""
+    html = '<div class="impressao-area"><h2>Relatório de Encomendas - Salgados Oliveira</h2>'
+    html += '<p>Data: ' + datetime.now().strftime('%d/%m/%Y %H:%M') + '</p>'
+    html += '<table class="impressao-tabela"><thead><tr>'
+    for col in df.columns:
+        html += f'<th>{col}</th>'
+    html += '</tr></thead><tbody>'
+    for _, row in df.iterrows():
+        html += '<tr>'
+        for val in row:
+            html += f'<td>{val}</td>'
+        html += '</tr>'
+    html += '</tbody></table></div>'
+    return html
 
 def login():
     col1, col2, col3 = st.columns([1,2,1])
@@ -351,9 +376,25 @@ def app_principal():
             df_filtrado = df[df['Status'].isin(filtro_status)]
             st.dataframe(df_filtrado, use_container_width=True, hide_index=True, height=400)
 
+            st.markdown(tabela_para_impressao(df_filtrado), unsafe_allow_html=True)
+
             col1, col2 = st.columns(2)
             with col1:
-                botao_imprimir()
+                components.html(
+                    """
+                    <button onclick="window.print()" style="
+                        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                    ">🖨️ Imprimir Página</button>
+                    """,
+                    height=50
+                )
             with col2:
                 st.markdown(gerar_pdf_download(df_filtrado, "encomendas_filtradas.csv"), unsafe_allow_html=True)
 
@@ -501,9 +542,25 @@ def app_principal():
 
             st.dataframe(df_relatorio[['Cliente', 'Produto', 'Quantidade', 'Valor', 'Data_Entrega', 'Status', 'Forma_Pagamento']], use_container_width=True, hide_index=True)
 
+            st.markdown(tabela_para_impressao(df_relatorio), unsafe_allow_html=True)
+
             col1, col2 = st.columns(2)
             with col1:
-                botao_imprimir()
+                components.html(
+                    """
+                    <button onclick="window.print()" style="
+                        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                    ">🖨️ Imprimir Relatório</button>
+                    """,
+                    height=50
+                )
             with col2:
                 st.markdown(gerar_pdf_download(df_relatorio, f"relatorio_{data_inicio}_{data_fim}.csv"), unsafe_allow_html=True)
 
@@ -533,7 +590,7 @@ def app_principal():
 
         st.markdown("---")
         st.markdown("**3. Informações**")
-        st.info("Sistema Salgados Oliveira v2.0 - Com edição e forma de pagamento")
+        st.info("Sistema Salgados Oliveira v2.1 - Com edição, pagamento e impressão corrigida")
 
 if 'logado' not in st.session_state:
     st.session_state['logado'] = False
