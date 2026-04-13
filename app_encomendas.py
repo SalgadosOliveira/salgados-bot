@@ -73,8 +73,11 @@ h1 {
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 @media print {
-  .stButton,.stTabs,header,footer,.stSidebar,[data-testid="stToolbar"] {
+ .stButton,.stTabs,header,footer,.stSidebar,[data-testid="stToolbar"],.element-container:has(.stButton) {
         display: none!important;
+    }
+ .main {
+        background: white!important;
     }
 }
 </style>
@@ -92,6 +95,8 @@ SALGADOS = [
     'Bolinha empanada de azeitona e queijo', 'Bolinha empanada de queijo',
     'Bolinha empanada de charque', 'Mini pizzas', 'Pastel mercado'
 ]
+
+FORMAS_PAGAMENTO = ['A vista', 'Cartão de crédito', 'Cartão de débito', 'Pix', 'Fiado']
 
 def salvar_dados(df):
     df.to_csv(ARQUIVO_CSV, index=False)
@@ -117,7 +122,7 @@ def atualizar_status_automatico(df):
 
 def carregar_dados():
     colunas = ['Data_Pedido', 'Cliente', 'Telefone', 'Produto', 'Quantidade',
-               'Valor', 'Data_Entrega', 'Hora_Entrega', 'Status', 'Observacoes']
+               'Valor', 'Data_Entrega', 'Hora_Entrega', 'Status', 'Observacoes', 'Forma_Pagamento']
     try:
         if os.path.exists(ARQUIVO_CSV) and os.path.getsize(ARQUIVO_CSV) > 0:
             df = pd.read_csv(ARQUIVO_CSV)
@@ -150,6 +155,20 @@ def gerar_pdf_download(df, nome_arquivo):
     href = f'<a href="data:file/csv;base64,{b64}" download="{nome_arquivo}">📥 Baixar CSV</a>'
     return href
 
+def botao_imprimir():
+    st.markdown("""
+    <button onclick="window.print()" style="
+        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+    ">🖨️ Imprimir Página</button>
+    """, unsafe_allow_html=True)
+
 def login():
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
@@ -173,42 +192,17 @@ def login():
                     st.error("❌ Usuário ou senha incorretos!")
         st.markdown('</div>', unsafe_allow_html=True)
 
-def app_principal():
-    if 'produtos' not in st.session_state:
-        st.session_state.produtos = []
-
-    col1, col2, col3 = st.columns([1,3,1])
-    with col1:
-        if os.path.exists(LOGO_PATH):
-            st.image(LOGO_PATH, width=80)
-    with col2:
-        st.markdown('<h1 style="app_principal():
-    if 'produtos' not in st.session_state:
-        st.session_state.produtos = []
-
-    col1, col2, col3 = st.columns([1,3,1])
-    with col1:
-        if os.path.exists(LOGO_PATH):
-            st.image(LOGO_PATH, width=80)
-    with col2:
-        st.markdown('<h1 style="text-align: center; margin: 0;">🥟 Salgados Oliveira</h1>', unsafe_allow_html=True)
-    with col3:
-        if st.button("🚪 Sair", use_container_width=True):
-            st.session_state['logado'] = False
-            st.rerun()
-    st.markdown("---")
-
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "📊 Dashboard", "➕ Nova", "📋 Ver", "✅ Entregue/Cancelada", "🗑️ Excluir", "📊 Relatório", "⚙️ Configurações"
-    ])
-
-    with tab1:
-        df = carregar_dados()
-        if df.empty:
-            st.info("📭 Nenhuma encomenda cadastrada ainda. Vá em 'Nova' para começar.")
-        else:
-            df['Data_Entrega_dt'] = pd.to_datetime(df['Data_Entrega'], format='%d/%m/%Y', errors='coerce')
-            hoje = date.today()
-            inicio_semana = hoje - timedelta(days=hoje.weekday())
-            fat_hoje = df[(df['Data_Entrega_dt'].dt.date == hoje) & (~df['Status'].isin(['Entregue', 'Cancelada']))]['Valor'].sum()
-            fat_semana = df[(df['Data_Entrega_dt'].dt.date >= inicio_semana) & (~df['Status'].
+def editar_encomenda(index, df):
+    st.subheader("editar_encomenda(index, df):
+    st.subheader("✏️ Editar Encomenda")
+    row = df.loc[index]
+    with st.form("editar_encomenda"):
+        cliente = st.text_input("Cliente", value=row['Cliente'])
+        telefone = st.text_input("Telefone", value=row['Telefone'])
+        produto = st.text_input("Produto", value=row['Produto'])
+        quantidade = st.number_input("Quantidade", value=int(row['Quantidade']), min_value=1)
+        valor = st.number_input("Valor", value=float(row['Valor']), min_value=0.0, format="%.2f")
+        data_entrega = st.date_input("Data Entrega", value=datetime.strptime(row['Data_Entrega'], '%d/%m/%Y'))
+        hora_entrega = st.time_input("Hora Entrega", value=datetime.strptime(row['Hora_Entrega'], '%H:%M'))
+        status = st.selectbox("Status", ['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'], index=['Pendente', 'Em produção', 'Pronto', 'Entregue', 'Cancelada'].index(row['Status']))
+        forma_pagamento = st.selectbox("Forma de
