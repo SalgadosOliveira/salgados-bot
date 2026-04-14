@@ -666,4 +666,4 @@ if st.session_state['logado']:
     app_principal()
 else:
     login()
-Migração para Google Sheets concluída
+# Migração para Google Sheets concluída
