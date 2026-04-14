@@ -124,7 +124,7 @@ def conectar_planilha():
     client = gspread.authorize(creds)
     planilha = client.open(NOME_PLANILHA).sheet1
     return planilha
-
+@st.cache_resource
 def carregar_dados():
     planilha = conectar_planilha()
     dados = planilha.get_all_records()
@@ -135,11 +135,7 @@ def carregar_dados():
         return pd.DataFrame(columns=colunas)
     df = atualizar_status_automatico(df)
     return df
-    except:
-        pass
-    df_vazio = pd.DataFrame(columns=colunas)
-    df_vazio.to_csv(ARQUIVO_CSV, index=False)
-    return df_vazio
+   
 
 def card_metrica(titulo, valor, icone, cor):
     st.markdown(f"""
@@ -670,3 +666,4 @@ if st.session_state['logado']:
     app_principal()
 else:
     login()
+Migração para Google Sheets concluída
