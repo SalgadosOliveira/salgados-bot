@@ -3,7 +3,11 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import os
 import base64
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
+NOME_PLANILHA = "Encomendas Salgados"
+SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 st.set_page_config(
     page_title="Salgados Oliveira",
     page_icon="🥟",
@@ -75,7 +79,7 @@ h1 {
 </style>
 """, unsafe_allow_html=True)
 
-ARQUIVO_CSV = "encomendas.csv"
+
 LOGO_PATH = "logo.png"
 
 SALGADOS = [
@@ -91,7 +95,9 @@ SALGADOS = [
 FORMAS_PAGAMENTO = ['A vista', 'Cartão de crédito', 'Cartão de débito', 'Pix', 'Fiado']
 
 def salvar_dados(df):
-    df.to_csv(ARQUIVO_CSV, index=False)
+    planilha = conectar_planilha()
+    planilha.clear()
+    planilha.update([df.columns.values.tolist()] + df.values.tolist())
 
 def atualizar_status_automatico(df):
     if df.empty:
@@ -112,18 +118,23 @@ def atualizar_status_automatico(df):
         salvar_dados(df)
     return df
 
+@st.cache_resource
+def conectar_planilha():
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], SCOPE)
+    client = gspread.authorize(creds)
+    planilha = client.open(NOME_PLANILHA).sheet1
+    return planilha
+
 def carregar_dados():
-    colunas = ['Data_Pedido', 'Cliente', 'Telefone', 'Produto', 'Quantidade',
-               'Valor', 'Data_Entrega', 'Hora_Entrega', 'Status', 'Observacoes', 'Forma_Pagamento']
-    try:
-        if os.path.exists(ARQUIVO_CSV) and os.path.getsize(ARQUIVO_CSV) > 0:
-            df = pd.read_csv(ARQUIVO_CSV)
-            if df.empty:
-                return pd.DataFrame(columns=colunas)
-            if 'Forma_Pagamento' not in df.columns:
-                df['Forma_Pagamento'] = 'A vista'
-            df = atualizar_status_automatico(df)
-            return df
+    planilha = conectar_planilha()
+    dados = planilha.get_all_records()
+    df = pd.DataFrame(dados)
+    if df.empty:
+        colunas = ['Data_Pedido', 'Cliente', 'Telefone', 'Produto', 'Quantidade',
+                   'Valor', 'Data_Entrega', 'Hora_Entrega', 'Status', 'Observacoes', 'Forma_Pagamento']
+        return pd.DataFrame(columns=colunas)
+    df = atualizar_status_automatico(df)
+    return df
     except:
         pass
     df_vazio = pd.DataFrame(columns=colunas)
